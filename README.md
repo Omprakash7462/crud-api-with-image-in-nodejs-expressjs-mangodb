@@ -31,7 +31,7 @@ A simple and efficient CRUD REST API built with **Node.js**, **Express.js**, and
 ```bash
 git clone https://github.com/Omprakash7462/crud-api-with-image-in-nodejs-expressjs-mangodb.git
 
-cd crud-api-node-express-mongodb
+cd crud-api-with-image-in-nodejs-expressjs-mangodb
 
 npm install
 
