@@ -1,7 +1,8 @@
-const User = require('../models/userModel.js');
+const User = require('../models/userModel');
+const fs = require('fs');
+const path = require('path');
 
-// @desc    Get all users
-// @route   GET /api/users
+// ✅ Get all users
 exports.getUsers = async (req, res) => {
     try {
         const users = await User.find();
@@ -11,52 +12,64 @@ exports.getUsers = async (req, res) => {
     }
 };
 
-// @desc    Create new user
-// @route   POST /api/users
+// ✅ Create new user with image
 exports.createUser = async (req, res) => {
     try {
         const { name, email, age } = req.body;
-        const newUser = new User({ name, email, age });
+        const image = req.file ? req.file.filename : null;
+
+        const newUser = new User({ name, email, age, image });
         await newUser.save();
+
         res.status(201).json(newUser);
     } catch (err) {
         res.status(400).json({ message: err.message });
     }
 };
 
-// ✅ Update user by ID
+// ✅ Update user with new image
 exports.updateUser = async (req, res) => {
     try {
-        const { id } = req.params; // user ID from URL
-        const { name, email, age } = req.body; // fields to update
+        const { id } = req.params;
+        const { name, email, age } = req.body;
 
-        const updatedUser = await User.findByIdAndUpdate(
-            id,
-            { name, email, age },
-            { new: true, runValidators: true }
-        );
+        const user = await User.findById(id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
 
-        if (!updatedUser) {
-            return res.status(404).json({ message: 'User not found' });
+        // If a new image is uploaded, delete the old one
+        if (req.file) {
+            if (user.image) {
+                const oldPath = path.join(__dirname, '../uploads/', user.image);
+                if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+            }
+            user.image = req.file.filename;
         }
 
-        res.status(200).json(updatedUser);
+        user.name = name || user.name;
+        user.email = email || user.email;
+        user.age = age || user.age;
+
+        await user.save();
+
+        res.status(200).json(user);
     } catch (err) {
         res.status(400).json({ message: err.message });
     }
 };
 
-// ✅ Delete user by ID
+// ✅ Delete user and image
 exports.deleteUser = async (req, res) => {
     try {
-        const { id } = req.params; // user ID from URL
+        const { id } = req.params;
+        const user = await User.findById(id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
 
-        const deletedUser = await User.findByIdAndDelete(id);
-
-        if (!deletedUser) {
-            return res.status(404).json({ message: 'User not found' });
+        if (user.image) {
+            const imagePath = path.join(__dirname, '../uploads/', user.image);
+            if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
         }
 
+        await user.deleteOne();
         res.status(200).json({ message: 'User deleted successfully' });
     } catch (err) {
         res.status(400).json({ message: err.message });
